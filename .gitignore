@@ -1,0 +1,22 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+db.sqlite3
+
+# Frontend
+node_modules/
+dist/
+coverage/
+
+# Local files
+.DS_Store
+.idea/
+*.log
