@@ -66,9 +66,9 @@ def geocode(query):
     }
 
 
-def get_route_options(origin_query, destination_query):
-    origin = geocode(origin_query)
-    destination = geocode(destination_query)
+def get_route_options(origin, destination):
+    origin = geocode(origin)
+    destination = geocode(destination)
 
     if origin["coordinates"] == destination["coordinates"]:
         raise MapboxError(
