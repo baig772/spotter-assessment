@@ -10,6 +10,8 @@ class RouteRequestSerializer(serializers.Serializer):
         choices=[10,25,50],
         default=25
     )
+    load_weight_lb = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=0)
+    
 
 
     def validate(self, attrs):

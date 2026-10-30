@@ -7,6 +7,8 @@ from rest_framework.response import Response
 from .serializers import RouteRequestSerializer
 from .services.mapbox import get_route_options, MapboxError
 from .services.checkpoints import build_checkpoints
+from .services.weather import attach_checkpoint_weather
+from .services.risk import attach_checkpoint_risks
 
 
 @api_view(["GET"])
@@ -50,10 +52,24 @@ def route_options(request):
             status=400,
         )
     
+
+    attach_checkpoint_weather(result["routes"])
+    
+    attach_checkpoint_risks(result['routes'], input['load_weight_lb'])
+
+    result['load_weight_lb'] = str(input['load_weight_lb'])
+
+    if any(not route["weather_complete"] for route in result["routes"]):
+        result["warnings"].append(
+            "Some checkpoints have unavailable weather. "
+            "These routes cannot be fully assessed."
+        )
+
     result['departure_time'] = (
         input["departure_time"].isoformat().replace("+00:00", "Z")
     )
     result['interval_miles'] = input['sampling_interval_miles']
+
 
     return Response(result)
 
