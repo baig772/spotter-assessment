@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { RiskLevel, RouteOption } from '../api/routes'
 import { riskColors } from '../lib/mapData'
 import RouteMap from './RouteMap'
+import MapErrorBoundary from "./MapErrorBoundary";
 
 interface Props {
     routes: RouteOption[]
@@ -162,13 +163,15 @@ export default function RouteResults({ routes, planId }: Props) {
                 Selected: {routeLabel(selectedId)}.
                 Selection changes the map view, not the recommendation.
             </p>
+            <MapErrorBoundary>
+                <RouteMap
+                    routes={routes}
+                    selectedId={selectedId}
+                    onSelectRoute={setSelectedId}
+                    planId={planId}
+                />
+            </MapErrorBoundary>
 
-            <RouteMap
-                routes={routes}
-                selectedId={selectedId}
-                onSelectRoute={setSelectedId}
-                planId={planId}
-            />
         </section>
     )
 }
