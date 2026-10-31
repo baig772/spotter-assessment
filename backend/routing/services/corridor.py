@@ -42,6 +42,7 @@ def build_corridor_grid(routes):
 
     def project(coordinate):
         longitude, latitude = coordinate
+
         return (
             EARTH_RADIUS_METERS
             * math.radians(longitude - origin_lon)
@@ -59,7 +60,10 @@ def build_corridor_grid(routes):
     samples = []
 
     for route in routes:
-        line = [project(point) for point in route["geometry"]["coordinates"]]
+        line = [
+            project(point)
+            for point in route["geometry"]["coordinates"]
+        ]
 
         if not line:
             continue
@@ -67,11 +71,19 @@ def build_corridor_grid(routes):
         samples.append(line[0])
 
         for start, end in zip(line, line[1:]):
-            distance = math.hypot(end[0] - start[0], end[1] - start[1])
-            steps = max(1, math.ceil(distance / ROUTE_SAMPLE_SPACING_METERS))
+            distance = math.hypot(
+                end[0] - start[0],
+                end[1] - start[1],
+            )
+
+            steps = max(
+                1,
+                math.ceil(distance / ROUTE_SAMPLE_SPACING_METERS),
+            )
 
             for step in range(1, steps + 1):
                 fraction = step / steps
+
                 samples.append((
                     start[0] + fraction * (end[0] - start[0]),
                     start[1] + fraction * (end[1] - start[1]),
@@ -79,7 +91,10 @@ def build_corridor_grid(routes):
 
     # Deduplicate nearby geometry samples to reduce grid-generation work.
     samples = list({
-        (round(x / 1000) * 1000, round(y / 1000) * 1000)
+        (
+            round(x / 1000) * 1000,
+            round(y / 1000) * 1000,
+        )
         for x, y in samples
     })
 
@@ -116,30 +131,30 @@ def build_corridor_grid(routes):
         x = grid_x * spacing
         y = grid_y * spacing
 
-    corners = [
-        unproject(x - half_spacing, y - half_spacing),
-        unproject(x + half_spacing, y - half_spacing),
-        unproject(x + half_spacing, y + half_spacing),
-        unproject(x - half_spacing, y + half_spacing),
-        unproject(x - half_spacing, y - half_spacing),
-    ]
+        corners = [
+            unproject(x - half_spacing, y - half_spacing),
+            unproject(x + half_spacing, y - half_spacing),
+            unproject(x + half_spacing, y + half_spacing),
+            unproject(x - half_spacing, y + half_spacing),
+            unproject(x - half_spacing, y - half_spacing),
+        ]
 
-    points.append({
-        "id": f"grid-{index}",
-        "coordinates": [
-            round(value, 5)
-            for value in unproject(x, y)
-        ],
-        "geometry": {
-            "type": "Polygon",
+        points.append({
+            "id": f"grid-{index}",
             "coordinates": [
-                [
-                    [round(value, 5) for value in corner]
-                    for corner in corners
-                ]
+                round(value, 5)
+                for value in unproject(x, y)
             ],
-        },
-    })
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        [round(value, 5) for value in corner]
+                        for corner in corners
+                    ]
+                ],
+            },
+        })
 
     return {
         "points": points,
