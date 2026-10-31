@@ -109,16 +109,37 @@ def build_corridor_grid(routes):
 
         spacing *= 1.4
 
-    points = [
-        {
-            "id": f"grid-{index}",
-            "coordinates": [
-                round(value, 5)
-                for value in unproject(grid_x * spacing, grid_y * spacing)
-            ],
-        }
-        for index, (grid_x, grid_y) in enumerate(sorted(cells))
+    points = []
+    half_spacing = spacing / 2
+
+    for index, (grid_x, grid_y) in enumerate(sorted(cells)):
+        x = grid_x * spacing
+        y = grid_y * spacing
+
+    corners = [
+        unproject(x - half_spacing, y - half_spacing),
+        unproject(x + half_spacing, y - half_spacing),
+        unproject(x + half_spacing, y + half_spacing),
+        unproject(x - half_spacing, y + half_spacing),
+        unproject(x - half_spacing, y - half_spacing),
     ]
+
+    points.append({
+        "id": f"grid-{index}",
+        "coordinates": [
+            round(value, 5)
+            for value in unproject(x, y)
+        ],
+        "geometry": {
+            "type": "Polygon",
+            "coordinates": [
+                [
+                    [round(value, 5) for value in corner]
+                    for corner in corners
+                ]
+            ],
+        },
+    })
 
     return {
         "points": points,

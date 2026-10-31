@@ -2,12 +2,14 @@ import { useEffect, useRef, useState } from 'react'
 import mapboxgl from 'mapbox-gl'
 import type { Checkpoint, RouteOption } from '../api/routes'
 import { createMapData, riskColors } from '../lib/mapData'
+import CorridorWeather from './CorridorWeather'
 import 'mapbox-gl/dist/mapbox-gl.css'
 
 interface Props {
     routes: RouteOption[]
     selectedId: string
     onSelectRoute: (routeId: string) => void
+    planId: string
 }
 
 function checkpointContent(checkpoint: Checkpoint) {
@@ -52,6 +54,7 @@ export default function RouteMap({
     routes,
     selectedId,
     onSelectRoute,
+    planId,
 }: Props) {
     const containerRef = useRef<HTMLDivElement>(null)
     const mapRef = useRef<mapboxgl.Map | null>(null)
@@ -59,6 +62,7 @@ export default function RouteMap({
 
     const [ready, setReady] = useState(false)
     const [mapError, setMapError] = useState('')
+    const [loadedMap, setLoadedMap] = useState<mapboxgl.Map | null>(null)
 
     const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN as string | undefined
     const selectedRoute = routes.find((route) => route.id === selectedId)
@@ -260,6 +264,7 @@ export default function RouteMap({
                 })
             }
 
+            setLoadedMap(map)
             setReady(true)
         })
 
@@ -344,6 +349,14 @@ export default function RouteMap({
 
             {!ready && !mapError && (
                 <p role="status">Loading map…</p>
+            )}
+
+            {loadedMap && (
+                <CorridorWeather
+                    key={planId}
+                    map={loadedMap}
+                    planId={planId}
+                />
             )}
 
             <div

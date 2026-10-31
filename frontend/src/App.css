@@ -365,3 +365,59 @@ button:disabled {
 .route-select-button[aria-pressed="false"]:hover {
   background: #d6e7e1;
 }
+
+.forecast-controls {
+  margin: 16px 0;
+  padding: 18px;
+  background: #f3f7fa;
+  border: 1px solid #dce5eb;
+  border-radius: 12px;
+}
+
+.forecast-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.forecast-heading h3 {
+  margin: 0;
+}
+
+.forecast-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.forecast-toggle input {
+  width: 18px;
+  height: 18px;
+  min-height: 0;
+  padding: 0;
+  accent-color: #17645e;
+}
+
+.forecast-timestamp {
+  margin: 8px 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+input.forecast-slider {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  accent-color: #17645e;
+}
+
+.forecast-range-labels {
+  display: flex;
+  justify-content: space-between;
+  color: #536777;
+  font-size: 12px;
+}

@@ -234,8 +234,9 @@ export default function App() {
                 </p>
                 <p>{result.recommendation.reason}</p>
                 <RouteResults
-                  key={result.departure_time}
+                  key={result.route_plan_id}
                   routes={result.routes}
+                  planId={result.route_plan_id}
                 />
               </>
             )}

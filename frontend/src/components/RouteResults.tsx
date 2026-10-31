@@ -5,6 +5,7 @@ import RouteMap from './RouteMap'
 
 interface Props {
     routes: RouteOption[]
+    planId: string
 }
 
 const riskLabels: Record<RiskLevel, string> = {
@@ -42,7 +43,7 @@ function routeLabel(id: string) {
     return id.replace(/^route-/, 'Route ')
 }
 
-export default function RouteResults({ routes }: Props) {
+export default function RouteResults({ routes, planId }: Props) {
     const [selectedId, setSelectedId] = useState(
         () => routes.find((route) => route.recommended)?.id || routes[0]?.id || '',
     )
@@ -166,6 +167,7 @@ export default function RouteResults({ routes }: Props) {
                 routes={routes}
                 selectedId={selectedId}
                 onSelectRoute={setSelectedId}
+                planId={planId}
             />
         </section>
     )

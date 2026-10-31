@@ -86,6 +86,7 @@ export interface RouteResponse {
         reason: string
     }
     warnings: string[]
+    route_plan_id: string
 }
 
 export class ApiError extends Error {
