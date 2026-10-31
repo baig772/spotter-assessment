@@ -1,6 +1,13 @@
-from django.apps import AppConfig
+from django.urls import path
 
+from .views import corridor_weather, health_check, route_options
 
-class RoutingConfig(AppConfig):
-    default_auto_field = 'django.db.models.BigAutoField'
-    name = 'routing'
+urlpatterns = [
+    path("health/", health_check, name="health"),
+    path("routes/", route_options, name="route-options"),
+    path(
+        "corridor-weather/",
+        corridor_weather,
+        name="corridor-weather",
+    ),
+]

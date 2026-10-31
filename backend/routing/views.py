@@ -10,6 +10,11 @@ from .services.checkpoints import build_checkpoints
 from .services.weather import attach_checkpoint_weather
 from .services.risk import attach_checkpoint_risks
 from .services.recommendations import analyze_and_recommend
+from uuid import uuid4
+from django.core.cache import cache
+from .serializers import CorridorWeatherRequestSerializer
+from .services.corridor import build_corridor_forecast
+from datetime import datetime, timezone
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
@@ -72,6 +77,51 @@ def route_options(request):
     )
     result['interval_miles'] = input['sampling_interval_miles']
 
+    plan_id = uuid4().hex
+    cache.set(
+        f"route-plan:{plan_id}",
+        {
+            "routes": result["routes"],
+            "load_weight_lb": str(input["load_weight_lb"]),
+        },
+        timeout=3600,
+    )
+
+    result["route_plan_id"] = plan_id
+
+    return Response(result)
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def corridor_weather(request):
+    serializer = CorridorWeatherRequestSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    plan_id = serializer.validated_data["route_plan_id"]
+    plan = cache.get(f"route-plan:{plan_id}")
+
+    if plan is None:
+        return Response(
+            {"detail": "Trip plan expired. Please plan the trip again."},
+            status=410,
+        )
+
+    hour_key = datetime.now(timezone.utc).strftime("%Y%m%d%H")
+    response_key = f"corridor-weather:{plan_id}:{hour_key}"
+    cached_result = cache.get(response_key)
+
+    if cached_result is not None:
+        return Response(cached_result)
+
+    try:
+        result = build_corridor_forecast(plan)
+    except ValueError as error:
+        return Response({"detail": str(error)}, status=422)
+
+    # Do not cache partial failures as complete corridor responses.
+    if not result["warnings"]:
+        cache.set(response_key, result, timeout=600)
 
     return Response(result)
 

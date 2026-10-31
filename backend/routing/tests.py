@@ -437,3 +437,82 @@ class RecommendationTests(SimpleTestCase):
 
         self.assertEqual(result["route_id"], "first")
         self.assertIn("tied", result["reason"])
+
+
+from .services.corridor import (
+    MAX_GRID_POINTS,
+    build_corridor_forecast,
+    build_corridor_grid,
+)
+
+
+class CorridorTests(SimpleTestCase):
+    def setUp(self):
+        self.plan = {
+            "load_weight_lb": "45000.00",
+            "routes": [{
+                "geometry": {
+                    "coordinates": [
+                        [-87.63, 41.88],
+                        [-86.16, 39.77],
+                    ],
+                },
+            }],
+        }
+
+    def test_grid_is_bounded_and_contains_off_route_points(self):
+        grid = build_corridor_grid(self.plan["routes"])
+
+        self.assertGreater(len(grid["points"]), 2)
+        self.assertLessEqual(len(grid["points"]), MAX_GRID_POINTS)
+
+        coordinates = [
+            tuple(point["coordinates"]) for point in grid["points"]
+        ]
+        self.assertEqual(len(coordinates), len(set(coordinates)))
+
+        route_vertices = {
+            tuple(point)
+            for point in self.plan["routes"][0]["geometry"]["coordinates"]
+        }
+        self.assertTrue(any(point not in route_vertices for point in coordinates))
+
+    def test_unsupported_projection_area_is_rejected(self):
+        routes = [{
+            "geometry": {
+                "coordinates": [[179, 40], [-179, 40]],
+            },
+        }]
+
+        with self.assertRaises(ValueError):
+            build_corridor_grid(routes)
+
+    @patch("routing.services.corridor.fetch_forecasts")
+    def test_response_has_49_frames_and_unknown_missing_weather(self, mock_fetch):
+        mock_fetch.return_value = {}
+
+        result = build_corridor_forecast(
+            self.plan,
+            datetime(2026, 10, 31, 12, 30, tzinfo=timezone.utc),
+        )
+
+        self.assertEqual(len(result["times"]), 49)
+        self.assertEqual(result["times"][0], "2026-10-31T12:00:00Z")
+        self.assertEqual(result["times"][-1], "2026-11-02T12:00:00Z")
+        self.assertTrue(result["warnings"])
+
+        for point in result["points"]:
+            self.assertEqual(len(point["forecasts"]), 49)
+            self.assertTrue(all(
+                sample["severity"] == "unknown"
+                for sample in point["forecasts"]
+            ))
+
+    def test_expired_plan_returns_410(self):
+        response = self.client.post(
+            "/api/corridor-weather/",
+            data={"route_plan_id": "0" * 32},
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 410)

@@ -20,3 +20,10 @@ class RouteRequestSerializer(serializers.Serializer):
                 "Origin and destination must be different."
             )
         return attrs
+
+
+class CorridorWeatherRequestSerializer(serializers.Serializer):
+    route_plan_id = serializers.RegexField(
+        regex=r"^[0-9a-f]{32}$",
+        max_length=32,
+    )
