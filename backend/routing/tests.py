@@ -300,3 +300,140 @@ class RiskTests(SimpleTestCase):
             data={**payload, "load_weight_lb": "0"}
         )
         self.assertTrue(empty_truck.is_valid(), empty_truck.errors)
+
+
+from .services.recommendations import (
+    analyze_and_recommend,
+    summarize_route,
+    ranking_key
+)
+
+class RecommendationTests(SimpleTestCase):
+    def make_route(self, route_id, levels, miles=None, duration=3600):
+        if miles is None:
+            miles = [index * 10 for index in range(len(levels))]
+
+        return {
+            "id": route_id,
+            "duration_seconds": duration,
+            "checkpoints": [
+                {
+                    "id": f"{route_id}-checkpoint-{index}",
+                    "distance_from_start_meters": mile * METERS_PER_MILE,
+                    "risk": {"severity": level},
+                }
+                for index, (mile, level) in enumerate(zip(miles, levels))
+            ],
+        }
+
+    def test_miles_and_average_are_distance_weighted(self):
+        route = self.make_route(
+            "route-1",
+            ["low", "moderate", "severe"],
+            miles=[0, 10, 30],
+        )
+
+        summary = summarize_route(route)
+
+        self.assertAlmostEqual(summary["risk_miles"]["moderate"], 10)
+        self.assertAlmostEqual(summary["risk_miles"]["severe"], 20)
+        self.assertAlmostEqual(sum(summary["risk_miles"].values()), 30)
+        self.assertAlmostEqual(summary["average_risk"], 70 / 30)
+
+    def test_final_partial_interval_is_counted(self):
+        route = self.make_route(
+            "route-1",
+            ["low", "low", "high"],
+            miles=[0, 25, 30],
+        )
+
+        summary = summarize_route(route)
+
+        self.assertAlmostEqual(summary["risk_miles"]["low"], 25)
+        self.assertAlmostEqual(summary["risk_miles"]["high"], 5)
+
+    def test_ranking_priorities_are_lexicographic(self):
+        def candidate(severe, high, average, duration):
+            return {
+                "duration_seconds": duration,
+                "risk_summary": {
+                    "risk_miles": {"severe": severe, "high": high},
+                    "average_risk": average,
+                },
+            }
+
+        cases = [
+            # Severe miles take priority over everything else.
+            (
+                candidate(0, 100, 2, 10000),
+                candidate(1, 0, 0.1, 100),
+            ),
+            # High miles take priority over average and time.
+            (
+                candidate(0, 0, 1, 10000),
+                candidate(0, 1, 0.1, 100),
+            ),
+            # Average risk takes priority over time.
+            (
+                candidate(0, 0, 0.1, 10000),
+                candidate(0, 0, 0.2, 100),
+            ),
+            # Duration breaks a risk tie.
+            (
+                candidate(0, 0, 0, 100),
+                candidate(0, 0, 0, 200),
+            ),
+        ]
+
+        for better, worse in cases:
+            with self.subTest(better=better, worse=worse):
+                self.assertLess(ranking_key(better), ranking_key(worse))
+
+    def test_blocked_and_unknown_routes_are_excluded(self):
+        routes = [
+            self.make_route("blocked", ["low", "no_travel"], duration=100),
+            self.make_route("unknown", ["low", "unknown"], duration=200),
+            self.make_route("eligible", ["low", "low"], duration=300),
+        ]
+
+        result = analyze_and_recommend(routes)
+
+        self.assertEqual(result["route_id"], "eligible")
+        self.assertEqual(result["eligible_route_ids"], ["eligible"])
+        self.assertIsNone(routes[0]["rank"])
+        self.assertIsNone(routes[1]["risk_summary"]["average_risk"])
+        self.assertEqual(routes[2]["rank"], 1)
+
+    def test_all_ineligible_returns_no_recommendation(self):
+        routes = [
+            self.make_route("blocked", ["no_travel", "no_travel"]),
+            self.make_route("unknown", ["unknown", "unknown"]),
+        ]
+
+        result = analyze_and_recommend(routes)
+
+        self.assertIsNone(result["route_id"])
+        self.assertFalse(any(route["recommended"] for route in routes))
+
+    def test_fastest_route_wins_when_weather_is_equal(self):
+        routes = [
+            self.make_route("slow", ["low", "low"], duration=5000),
+            self.make_route("fast", ["low", "low"], duration=3000),
+        ]
+
+        result = analyze_and_recommend(routes)
+
+        self.assertEqual(result["route_id"], "fast")
+        self.assertEqual(result["eligible_route_ids"], ["fast", "slow"])
+        self.assertIn("shorter travel time", result["reason"])
+
+    def test_exact_tie_preserves_provider_order(self):
+        routes = [
+            self.make_route("first", ["low", "low"]),
+            self.make_route("second", ["low", "low"]),
+        ]
+
+        result = analyze_and_recommend(routes)
+
+        self.assertEqual(result["route_id"], "first")
+        self.assertIn("tied", result["reason"])

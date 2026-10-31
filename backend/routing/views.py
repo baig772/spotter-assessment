@@ -9,7 +9,7 @@ from .services.mapbox import get_route_options, MapboxError
 from .services.checkpoints import build_checkpoints
 from .services.weather import attach_checkpoint_weather
 from .services.risk import attach_checkpoint_risks
-
+from .services.recommendations import analyze_and_recommend
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
@@ -56,6 +56,8 @@ def route_options(request):
     attach_checkpoint_weather(result["routes"])
     
     attach_checkpoint_risks(result['routes'], input['load_weight_lb'])
+
+    result["recommendation"] = analyze_and_recommend(result["routes"])
 
     result['load_weight_lb'] = str(input['load_weight_lb'])
 
