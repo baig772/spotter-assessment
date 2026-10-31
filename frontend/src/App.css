@@ -237,3 +237,131 @@ button:disabled {
     height: 360px;
   }
 }
+
+.route-results {
+  margin-top: 28px;
+}
+
+.route-comparison-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 14px;
+  margin: 18px 0;
+}
+
+.route-card {
+  min-width: 0;
+  padding: 18px;
+  border: 2px solid #dce5eb;
+  border-radius: 12px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+}
+
+.route-card.is-selected {
+  border-color: #17645e;
+  background: #f6fbf9;
+}
+
+.route-card-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.route-card-heading h4 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.route-badge {
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #edf2f6;
+  color: #395266;
+}
+
+.route-badge.recommended {
+  background: #dff2e8;
+  color: #155c43;
+}
+
+.route-badge.excluded {
+  background: #fbe6e5;
+  color: #98251d;
+}
+
+.route-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin: 20px 0 0;
+}
+
+.route-metrics dt {
+  font-size: 12px;
+  color: #536777;
+}
+
+.route-metrics dd {
+  margin: 5px 0 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.metric-full {
+  grid-column: 1 / -1;
+}
+
+.risk-mile-list {
+  margin: 10px 0 20px;
+}
+
+.risk-mile-list>div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  font-size: 13px;
+}
+
+.risk-mile-list dt {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.risk-mile-list dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.risk-mile-list i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.route-exclusion {
+  color: #98251d;
+  font-size: 13px;
+}
+
+.route-select-button {
+  width: 100%;
+  margin-top: auto;
+}
+
+.route-select-button[aria-pressed="false"] {
+  background: #e7efed;
+  color: #17534e;
+}
+
+.route-select-button[aria-pressed="false"]:hover {
+  background: #d6e7e1;
+}

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { ApiError, planTrip } from './api/routes'
 import type { RouteResponse } from './api/routes'
-import RouteMap from './components/RouteMap'
+import RouteResults from './components/RouteResults'
 import './App.css'
 
 function initialDeparture() {
@@ -233,7 +233,7 @@ export default function App() {
                   </strong>
                 </p>
                 <p>{result.recommendation.reason}</p>
-                <RouteMap
+                <RouteResults
                   key={result.departure_time}
                   routes={result.routes}
                 />

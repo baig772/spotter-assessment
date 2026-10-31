@@ -6,6 +6,8 @@ import 'mapbox-gl/dist/mapbox-gl.css'
 
 interface Props {
     routes: RouteOption[]
+    selectedId: string
+    onSelectRoute: (routeId: string) => void
 }
 
 function checkpointContent(checkpoint: Checkpoint) {
@@ -16,6 +18,7 @@ function checkpointContent(checkpoint: Checkpoint) {
     heading.textContent =
         `${(checkpoint.distance_from_start_meters / 1609.344).toFixed(1)} miles` +
         ` · ${checkpoint.risk.severity.replace('_', ' ').toUpperCase()}`
+
     container.append(heading)
 
     const rows = [
@@ -45,14 +48,15 @@ function checkpointContent(checkpoint: Checkpoint) {
     return container
 }
 
-export default function RouteMap({ routes }: Props) {
+export default function RouteMap({
+    routes,
+    selectedId,
+    onSelectRoute,
+}: Props) {
     const containerRef = useRef<HTMLDivElement>(null)
     const mapRef = useRef<mapboxgl.Map | null>(null)
     const popupRef = useRef<mapboxgl.Popup | null>(null)
 
-    const [selectedId, setSelectedId] = useState(
-        () => routes.find((route) => route.recommended)?.id || routes[0]?.id || '',
-    )
     const [ready, setReady] = useState(false)
     const [mapError, setMapError] = useState('')
 
@@ -85,16 +89,33 @@ export default function RouteMap({ routes }: Props) {
         map.on('load', () => {
             const data = createMapData(routes)
 
-            map.addSource('routes', { type: 'geojson', data: data.lines })
-            map.addSource('risks', { type: 'geojson', data: data.risks })
-            map.addSource('checkpoints', { type: 'geojson', data: data.points })
+            map.addSource('routes', {
+                type: 'geojson',
+                data: data.lines,
+            })
+
+            map.addSource('risks', {
+                type: 'geojson',
+                data: data.risks,
+            })
+
+            map.addSource('checkpoints', {
+                type: 'geojson',
+                data: data.points,
+            })
 
             map.addLayer({
                 id: 'route-backgrounds',
                 type: 'line',
                 source: 'routes',
-                paint: { 'line-color': '#516780', 'line-width': 9 },
-                layout: { 'line-cap': 'round', 'line-join': 'round' },
+                paint: {
+                    'line-color': '#516780',
+                    'line-width': 9,
+                },
+                layout: {
+                    'line-cap': 'round',
+                    'line-join': 'round',
+                },
             })
 
             map.addLayer({
@@ -112,7 +133,10 @@ export default function RouteMap({ routes }: Props) {
                 id: 'route-hit',
                 type: 'line',
                 source: 'routes',
-                paint: { 'line-width': 22, 'line-opacity': 0 },
+                paint: {
+                    'line-width': 22,
+                    'line-opacity': 0,
+                },
             })
 
             map.addLayer({
@@ -120,8 +144,14 @@ export default function RouteMap({ routes }: Props) {
                 type: 'line',
                 source: 'routes',
                 filter: ['==', 'routeId', ''],
-                paint: { 'line-color': '#172b3a', 'line-width': 11 },
-                layout: { 'line-cap': 'round', 'line-join': 'round' },
+                paint: {
+                    'line-color': '#172b3a',
+                    'line-width': 11,
+                },
+                layout: {
+                    'line-cap': 'round',
+                    'line-join': 'round',
+                },
             })
 
             map.addLayer({
@@ -129,8 +159,14 @@ export default function RouteMap({ routes }: Props) {
                 type: 'line',
                 source: 'risks',
                 filter: ['==', 'routeId', ''],
-                paint: { 'line-color': ['get', 'color'], 'line-width': 7 },
-                layout: { 'line-cap': 'round', 'line-join': 'round' },
+                paint: {
+                    'line-color': ['get', 'color'],
+                    'line-width': 7,
+                },
+                layout: {
+                    'line-cap': 'round',
+                    'line-join': 'round',
+                },
             })
 
             map.addLayer({
@@ -151,17 +187,26 @@ export default function RouteMap({ routes }: Props) {
                 type: 'circle',
                 source: 'checkpoints',
                 filter: ['==', 'routeId', ''],
-                paint: { 'circle-radius': 16, 'circle-opacity': 0 },
+                paint: {
+                    'circle-radius': 16,
+                    'circle-opacity': 0,
+                },
             })
 
             const bounds = new mapboxgl.LngLatBounds()
 
-            routes.forEach((route) => {
-                route.geometry.coordinates.forEach((coordinate) => bounds.extend(coordinate))
-            })
+            for (const route of routes) {
+                for (const coordinate of route.geometry.coordinates) {
+                    bounds.extend(coordinate)
+                }
+            }
 
             if (!bounds.isEmpty()) {
-                map.fitBounds(bounds, { padding: 50, duration: 0, maxZoom: 12 })
+                map.fitBounds(bounds, {
+                    padding: 50,
+                    duration: 0,
+                    maxZoom: 12,
+                })
             }
 
             map.on('click', (event) => {
@@ -175,13 +220,17 @@ export default function RouteMap({ routes }: Props) {
                     const route = routes.find(
                         (item) => item.id === point.properties?.routeId,
                     )
+
                     const checkpoint = route?.checkpoints.find(
                         (item) => item.id === point.properties?.checkpointId,
                     )
 
                     if (checkpoint) {
                         popupRef.current?.remove()
-                        popupRef.current = new mapboxgl.Popup({ maxWidth: '300px' })
+
+                        popupRef.current = new mapboxgl.Popup({
+                            maxWidth: '300px',
+                        })
                             .setLngLat(checkpoint.coordinates)
                             .setDOMContent(checkpointContent(checkpoint))
                             .addTo(map)
@@ -193,15 +242,19 @@ export default function RouteMap({ routes }: Props) {
                 const hits = map.queryRenderedFeatures(event.point, {
                     layers: ['route-hit'],
                 })
+
                 const routeId = hits[0]?.properties?.routeId
 
-                if (typeof routeId === 'string') setSelectedId(routeId)
+                if (typeof routeId === 'string') {
+                    onSelectRoute(routeId)
+                }
             })
 
             for (const layer of ['route-hit', 'checkpoint-hit']) {
                 map.on('mouseenter', layer, () => {
                     map.getCanvas().style.cursor = 'pointer'
                 })
+
                 map.on('mouseleave', layer, () => {
                     map.getCanvas().style.cursor = ''
                 })
@@ -216,10 +269,11 @@ export default function RouteMap({ routes }: Props) {
             map.remove()
             mapRef.current = null
         }
-    }, [routes, token])
+    }, [routes, token, onSelectRoute])
 
     useEffect(() => {
         const map = mapRef.current
+
         if (!ready || !map || !map.getLayer('selected-risk')) return
 
         for (const layer of [
@@ -235,12 +289,19 @@ export default function RouteMap({ routes }: Props) {
     }, [selectedId, ready])
 
     function inspectCheckpoint(id: string) {
-        const checkpoint = selectedRoute?.checkpoints.find((point) => point.id === id)
+        const checkpoint = selectedRoute?.checkpoints.find(
+            (point) => point.id === id,
+        )
+
         const map = mapRef.current
+
         if (!checkpoint || !map || !ready) return
 
         popupRef.current?.remove()
-        popupRef.current = new mapboxgl.Popup({ maxWidth: '300px' })
+
+        popupRef.current = new mapboxgl.Popup({
+            maxWidth: '300px',
+        })
             .setLngLat(checkpoint.coordinates)
             .setDOMContent(checkpointContent(checkpoint))
             .addTo(map)
@@ -267,7 +328,7 @@ export default function RouteMap({ routes }: Props) {
                         key={route.id}
                         type="button"
                         aria-pressed={selectedId === route.id}
-                        onClick={() => setSelectedId(route.id)}
+                        onClick={() => onSelectRoute(route.id)}
                     >
                         {route.id}
                         {route.recommended ? ' · Recommended' : ''}
@@ -275,8 +336,15 @@ export default function RouteMap({ routes }: Props) {
                 ))}
             </div>
 
-            {mapError && <p role="alert" className="error-message">{mapError}</p>}
-            {!ready && !mapError && <p role="status">Loading map…</p>}
+            {mapError && (
+                <p role="alert" className="error-message">
+                    {mapError}
+                </p>
+            )}
+
+            {!ready && !mapError && (
+                <p role="status">Loading map…</p>
+            )}
 
             <div
                 ref={containerRef}
@@ -287,7 +355,10 @@ export default function RouteMap({ routes }: Props) {
             <div className="risk-legend" aria-label="Weather risk legend">
                 {Object.entries(riskColors).map(([level, color]) => (
                     <span key={level}>
-                        <i style={{ backgroundColor: color }} aria-hidden="true" />
+                        <i
+                            style={{ backgroundColor: color }}
+                            aria-hidden="true"
+                        />
                         {level.replace('_', ' ')}
                     </span>
                 ))}
@@ -307,11 +378,17 @@ export default function RouteMap({ routes }: Props) {
                     onChange={(event) => inspectCheckpoint(event.target.value)}
                 >
                     <option value="">Choose a checkpoint</option>
+
                     {selectedRoute?.checkpoints.map((checkpoint, index, points) => (
                         <option key={checkpoint.id} value={checkpoint.id}>
-                            {index === 0 ? 'Start · ' : index === points.length - 1 ? 'End · ' : ''}
+                            {index === 0
+                                ? 'Start · '
+                                : index === points.length - 1
+                                    ? 'End · '
+                                    : ''}
                             {(checkpoint.distance_from_start_meters / 1609.344).toFixed(1)} mi
-                            {' · '}{checkpoint.risk.severity.replace('_', ' ')}
+                            {' · '}
+                            {checkpoint.risk.severity.replace('_', ' ')}
                         </option>
                     ))}
                 </select>
